@@ -124,6 +124,7 @@ public class LoadSatellite {
 
 	public String[] getAllSatellites() {
 		try {
+			Log.d(LOG_TAG,"start get all satellites");
 			URLConnection conn = new URI(satellites).toURL().openConnection();
 			conn.connect();
 			InputStream in = new BufferedInputStream(conn.getInputStream());

@@ -4,9 +4,7 @@
     android:versionCode="1"
     android:versionName="1.0" >
 
-    <uses-sdk
-        android:minSdkVersion="8"
-        android:targetSdkVersion="17" />
+    <uses-sdk android:minSdkVersion="15" />
 
     <uses-permission android:name="android.permission.INTERNET" />
 
@@ -15,22 +13,15 @@
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
-
-        <service android:name=".remote.SatelliteService" >
-            <intent-filter>
-                <action android:name="com.inventions.taiwansatellites.load_satellite" />
-            </intent-filter>
-        </service>
-
         <receiver android:name=".SatelliteWidget" >
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
-        </receiver>
 
-        <meta-data
-            android:name="android.appwidget.provider"
-            android:resource="@xml/satellite_provider" />
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/satellite_provider" />
+        </receiver>
     </application>
 
 </manifest>
