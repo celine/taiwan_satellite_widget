@@ -15,7 +15,9 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.squareup.picasso.Cache;
 import com.squareup.picasso.LruCache;
@@ -43,7 +45,7 @@ public class LoadSatellite {
 	}
 
 	public List<String> loadSatellitesPath() {
-		String pics[] = getAllSatellites();
+		String pics[] = null;
 		List<String> filePath = new ArrayList<String>();
 		Uri uris[] = new Uri[pics.length];
 		int i = 0;
@@ -122,19 +124,42 @@ public class LoadSatellite {
 		return file.getPath();
 	}
 
-	public String[] getAllSatellites() {
+	public Map<Long, String> getAllSatellites() {
+		Map<Long, String> pathMap = new HashMap<Long, String>();
 		try {
-			Log.d(LOG_TAG,"start get all satellites");
+			Log.d(LOG_TAG, "start get all satellites");
 			URLConnection conn = new URI(satellites).toURL().openConnection();
 			conn.connect();
 			InputStream in = new BufferedInputStream(conn.getInputStream());
 			try {
 				String result = readStream(in);
-				Log.d(LOG_TAG, "result " + result);
+
 				result = result.substring(result.indexOf('{') + 1,
 						result.indexOf('}') - 1);
 				String output[] = result.split(",");
-				return output;
+				for (String pic : output) {
+					Log.d(LOG_TAG, "pic " + pic);
+					String urltime[] = pic.split("\":\"");
+					String uri = PREFIX
+							+ urltime[0].substring(urltime[0].indexOf('"') + 1,
+									urltime[0].length());
+					Log.d(LOG_TAG, "urltime[1] " + urltime[1]);
+					String time = urltime[1].substring(0,
+							urltime[1].length() - 1);
+
+					Log.d(LOG_TAG, "time " + time);
+					SimpleDateFormat sdf = new SimpleDateFormat(
+							"yyyy/MM/dd HH:mm");
+					Date date;
+					try {
+						date = sdf.parse(time);
+						Log.d(LOG_TAG, "put date " + date.getTime());
+						pathMap.put(date.getTime(), uri);
+
+					} catch (ParseException e) {
+						Log.e(LOG_TAG, "error", e);
+					}
+				}
 			} finally {
 				in.close();
 			}
@@ -144,6 +169,6 @@ public class LoadSatellite {
 		} catch (URISyntaxException e) {
 			Log.e(LOG_TAG, "error", e);
 		}
-		return null;
+		return pathMap;
 	}
 }
