@@ -94,9 +94,10 @@ public class LoadSatellite {
 		byte data[] = new byte[BUFFSIZE];
 		int byteRead = 0;
 		try {
-			while ((byteRead = in.read(data)) > 0) {
-				out.write(data);
+			while ((byteRead = in.read(data)) != -1) {
+				out.write(data, 0, byteRead);
 			}
+			out.flush();
 			byte result[] = out.toByteArray();
 
 			return new String(result);
@@ -124,7 +125,7 @@ public class LoadSatellite {
 		return file.getPath();
 	}
 
-	public Map<Long, String> getAllSatellites() {
+	public Map<Long, String> fetchAllSatellites() {
 		Map<Long, String> pathMap = new HashMap<Long, String>();
 		try {
 			Log.d(LOG_TAG, "start get all satellites");

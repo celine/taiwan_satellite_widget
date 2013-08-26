@@ -2,20 +2,30 @@ package com.inventions.taiwansatellites.fragment;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLConnection;
+import java.util.Map;
 
+import com.inventions.taiwansatellites.Constants;
+import com.inventions.taiwansatellites.LoadSatellite;
 import com.inventions.taiwansatellites.R;
+import com.inventions.taiwansatellites.SatelliteData;
+import com.inventions.taiwansatellites.Utils;
 import com.squareup.picasso.Loader.Response;
 import com.squareup.picasso.Picasso;
 import com.squareup.picasso.RequestBuilder;
 import com.squareup.picasso.UrlConnectionLoader;
 
+import android.app.Activity;
+import android.appwidget.AppWidgetManager;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -26,21 +36,26 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.View.OnClickListener;
+import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.RemoteViews;
 import android.widget.ViewFlipper;
 
 public class SatelliteFragment extends Fragment implements
-		LoaderManager.LoaderCallbacks<String[]> {
-	static final String satellites = "http://www.cwb.gov.tw/V7/js/HS1P.js";
+		LoaderManager.LoaderCallbacks<SatelliteData>, Constants {
 	static final String PREFIX = "http://www.cwb.gov.tw";
 	ImageView mImgView;
 	private static final String LOG_TAG = "SatelliteFragment";
+	Button mCreate;
+	int mAppWidgetId;
 
 	@Override
 	public void onActivityCreated(Bundle savedInstanceState) {
 		super.onActivityCreated(savedInstanceState);
 		Log.d(LOG_TAG, "onActivityCreated");
 		getLoaderManager().initLoader(0, null, this);
+
 	}
 
 	@Override
@@ -48,13 +63,45 @@ public class SatelliteFragment extends Fragment implements
 			Bundle savedInstanceState) {
 		View view = inflater.inflate(R.layout.satellite_fragment, container,
 				false);
+		Activity main = getActivity();
+		if (main != null) {
+			Intent intent = main.getIntent();
+			Bundle extras = intent.getExtras();
+			if (extras != null) {
+				mAppWidgetId = extras.getInt(
+						AppWidgetManager.EXTRA_APPWIDGET_ID,
+						AppWidgetManager.INVALID_APPWIDGET_ID);
+			}
+			AppWidgetManager appWidgetManager = AppWidgetManager
+					.getInstance(main.getApplicationContext());
+			RemoteViews views = new RemoteViews(main.getPackageName(),
+					R.layout.satellite_img);
+			appWidgetManager.updateAppWidget(mAppWidgetId, views);
+		}
+		mCreate = (Button) view.findViewById(R.id.start);
+		mCreate.setOnClickListener(new OnClickListener() {
+
+			@Override
+			public void onClick(View v) {
+				Intent resultValue = new Intent();
+				resultValue.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,
+						mAppWidgetId);
+				Activity activity = getActivity();
+				if (activity != null) {
+					activity.setResult(Activity.RESULT_OK, resultValue);
+					activity.finish();
+				}
+
+			}
+		});
+		mCreate.setEnabled(false);
 		mImgView = (ImageView) view.findViewById(R.id.img);
 		return view;
 	}
 
-	public static class SatelliteLoader extends AsyncTaskLoader<String[]> {
+	public static class SatelliteLoader extends AsyncTaskLoader<SatelliteData> {
 		Context mContext;
-		String mResults[] = null;
+		SatelliteData mResults = null;
 
 		public SatelliteLoader(Context context) {
 			super(context);
@@ -72,29 +119,11 @@ public class SatelliteFragment extends Fragment implements
 		}
 
 		@Override
-		public String[] loadInBackground() {
-			try {
-				URLConnection conn = new URI(satellites).toURL()
-						.openConnection();
-				conn.connect();
-				InputStream in = new BufferedInputStream(conn.getInputStream());
-				try {
-					String result = readStream(in);
-					Log.d(LOG_TAG, "result " + result);
-					result = result.substring(result.indexOf('{') + 1,
-							result.indexOf('}') - 1);
-					String output[] = result.split(",");
-					return output;
-				} finally {
-					in.close();
-				}
-
-			} catch (IOException e) {
-				Log.e(LOG_TAG, "error", e);
-			} catch (URISyntaxException e) {
-				Log.e(LOG_TAG, "error", e);
-			}
-			return null;
+		public SatelliteData loadInBackground() {
+			SatelliteData data = new SatelliteData(mContext);
+			data.readData();
+			Utils.loadDataAndStore(mContext, data);
+			return data;
 		}
 
 	}
@@ -120,31 +149,24 @@ public class SatelliteFragment extends Fragment implements
 	}
 
 	@Override
-	public Loader<String[]> onCreateLoader(int arg0, Bundle arg1) {
+	public Loader<SatelliteData> onCreateLoader(int arg0, Bundle arg1) {
 		return new SatelliteLoader(getActivity());
 	}
 
 	@Override
-	public void onLoadFinished(Loader<String[]> arg0, String[] pics) {
-		Uri uris[] = new Uri[pics.length];
-		int i = 0;
-		for (String pic : pics) {
-			Log.d(LOG_TAG, "pic " + pic);
-			String uri = PREFIX
-					+ pic.substring(pic.indexOf('"') + 1, pic.indexOf('"', 2));
-			Log.d(LOG_TAG, "uri " + uri);
-			uris[i++] = Uri.parse(uri);
+	public void onLoadFinished(Loader<SatelliteData> arg0, SatelliteData data) {
+		long latest = data.getLatestTime();
+		Map<Long, String>pathMap = data.getPathMap();
+		if(pathMap != null){
+			String url = pathMap.get(latest);
+			Picasso.with(getActivity()).load(url).into(mImgView);
 		}
-
-		RequestBuilder builder = Picasso.with(getActivity()).load(uris[0]);
-		Log.d(LOG_TAG, "uris " + uris[0]);
-		builder.into(mImgView);
-
+		mCreate.setEnabled(true);
 	}
 
 	@Override
-	public void onLoaderReset(Loader<String[]> arg0) {
-		// TODO Auto-generated method stub
+	public void onLoaderReset(Loader<SatelliteData> arg0) {
+		// mResults = null;
 
 	}
 

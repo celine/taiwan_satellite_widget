@@ -16,12 +16,22 @@
         <receiver android:name=".SatelliteWidget" >
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.inventions.taiwansatellites.VIEW_NOW" />
             </intent-filter>
 
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/satellite_provider" />
         </receiver>
+
+        <service android:name=".remote.SatelliteService" >
+        </service>
+
+        <activity android:name=".SatelliteConfigure" >
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
     </application>
 
 </manifest>
